@@ -9,6 +9,7 @@ while true do
 
   if services.countShipsRemaining(services.npc) == 0 then
     print("Congratulations! You won!")
+    services.drawBoards(true)
     break
   end
 
@@ -16,8 +17,9 @@ while true do
 
   if services.countShipsRemaining(services.player) == 0 then
     print("Game over! The NPC won.")
+    services.drawBoards(true)
     break
   end
+
 end
 
-services.drawFinalResult()

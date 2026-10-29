@@ -35,31 +35,17 @@ local function drawLegend()
   print("N = Ship")
 end
 
-local function drawMap(map)
+local function drawMap(map, hideShips)
   io.write("   ")
   for i = 1, config.MAP_SIZE do
     io.write(config.LETTERS_MAP[i] .. " ")
   end
   print()
-  for index, line in ipairs(map) do
-    io.write(string.format("%2d ", index))
-    for _, column in ipairs(line) do
-      io.write(column .. " ")
-    end
-    print()
-  end
-end
 
-local function drawNpcMap(map)
-  io.write("   ")
-  for i = 1, config.MAP_SIZE do
-    io.write(config.LETTERS_MAP[i] .. " ")
-  end
-  print()
   for index, line in ipairs(map) do
     io.write(string.format("%2d ", index))
     for _, column in ipairs(line) do
-      if column == "N" then
+      if hideShips and column == "N" then
         io.write(". ")
       else
         io.write(column .. " ")
@@ -69,37 +55,29 @@ local function drawNpcMap(map)
   end
 end
 
-local function isValidCoordinate(coordinate)
-  if coordinate == nil then
-    return false
+
+
+local function parseCoordinate(coordinate)
+  if not coordinate then
+    return nil
   end
   local column = string.upper(string.sub(coordinate, 1, 1))
   local row = tonumber(string.sub(coordinate, 2, 2))
   if #coordinate ~= 2 or row == nil or row > config.MAP_SIZE or config.LETTERS_INDEX[column] == nil or row < 1 or config.LETTERS_INDEX[column] > config.MAP_SIZE then
-    return false
-  else
-    return true
+    return nil
   end
-end
-
-local function parseCoordinate(coordinate)
-  if isValidCoordinate(coordinate) then
-    local column = string.upper(string.sub(coordinate, 1, 1))
-    local row = tonumber(string.sub(coordinate, 2, 2))
-    return row, config.LETTERS_INDEX[column]
-  end
-  return nil
+  return row, config.LETTERS_INDEX[column]
 end
 
 local function attack(targetMap, row, column)
-  local map = targetMap[row][column]
+  local cell = targetMap[row][column]
 
-  if map == "A" or map == "X" then
+  if cell == "A" or cell == "X" then
     return "already_attacked"
-  elseif map == "N" then
+  elseif cell == "N" then
     targetMap[row][column] = "X"
     return "hit"
-  elseif map == "." then
+  elseif cell == "." then
     targetMap[row][column] = "A"
     return "miss"
   end
@@ -108,9 +86,9 @@ end
 local function placeShip(targetMap, row, column)
   if targetMap[row][column] == "." then
     targetMap[row][column] = "N"
-    return "success"
+    return true
   end
-  return "failure"
+  return false
 end
 
 local function generateRandomCoordinate()
@@ -121,12 +99,12 @@ local function setupPlayerFleet(targetMap)
   local shipsLeft = 5
   while shipsLeft > 0 do
     print("-------------- PLAYER MAP -------------------")
-    drawMap(player)
+    drawMap(player, false)
     print("You gotta choose a position to put your ships. Example: (B3). Positions left: " .. shipsLeft)
     local coordinate = io.read()
     local row, column = parseCoordinate(coordinate)
     if row ~= nil and column ~= nil then
-      if placeShip(targetMap, row, column) == "success" then
+      if placeShip(targetMap, row, column) then
         shipsLeft = shipsLeft - 1
       else
         print("This position is already occupied. Choose another one.")
@@ -141,7 +119,7 @@ local function setupNpcFleet(targetMap)
   local shipsLeft = 5
   while shipsLeft > 0 do
     local row, column = generateRandomCoordinate()
-    if placeShip(targetMap, row, column) == "success" then
+    if placeShip(targetMap, row, column) then
       shipsLeft = shipsLeft - 1
     end
   end
@@ -201,13 +179,19 @@ local function countShipsRemaining(map)
   return shipsRemaining
 end
 
-local function drawBoards()
+local function drawBoards(isFinalResult)
+
+  if isFinalResult then
+    print("------------------------------ Final Result ------------------------------")
+  end
+
+
   drawLegend()
   print("-------------- PLAYER MAP | SHIPS REMAINING: " .. countShipsRemaining(player) .. " -------------------")
-  drawMap(player)
+  drawMap(player, false)
 
   print("-------------- NPC MAP | SHIPS REMAINING: " .. countShipsRemaining(npc) .. " -------------------")
-  drawNpcMap(npc)
+  drawMap(npc, not isFinalResult)
 end
 
 local function setup()
@@ -222,21 +206,8 @@ services.playerTurn = playerTurn
 services.npcTurn = npcTurn
 services.countShipsRemaining = countShipsRemaining
 services.drawBoards = drawBoards
-services.drawNpcMap = drawNpcMap
 services.drawLegend = drawLegend
 services.drawMap = drawMap
 services.setup = setup
-
-local function drawFinalResult()
-  print("------- Final Result ---------")
-  drawLegend()
-  print("-------------- PLAYER MAP | SHIPS REMAINING: " .. countShipsRemaining(player) .. " -------------------")
-  drawMap(player)
-
-  print("-------------- NPC MAP | SHIPS REMAINING: " .. countShipsRemaining(npc) .. " -------------------")
-  drawMap(npc)
-end
-
-services.drawFinalResult = drawFinalResult
 
 return services
